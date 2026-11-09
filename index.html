@@ -297,7 +297,7 @@ pre { overflow-x: auto; background: var(--surface-2); padding: 11px 13px; border
     <h2 style="font-size:15px;margin-top:26px">Run history</h2>
     <div class="timeline" id="runs"></div>
     <details class="addagent" id="storepanel">
-      <summary>Storage</summary>
+      <summary>Storage — connect this page to your data</summary>
       <p style="font-size:13.5px;color:var(--fg-dim);margin:8px 0 0" id="store-explain"></p>
       <div class="cfg">
         <label>Owner <input id="gh-owner" autocomplete="off" placeholder="your-github-username"></label>
@@ -968,7 +968,15 @@ Instructions in plain Markdown.</pre>
       try { await S.store.start(); S.connected = true; }
       catch (e) { S.note = String((e && e.message) || e); }
     } else {
-      S.note = "not connected — open Factory → Storage";
+      S.note = "not connected — enter your repository and token below";
+    }
+    if (!S.connected) {
+      // First run on a device. Put the setup in front of her instead of leaving it
+      // collapsed, on a tab she has not opened, below a section she has to scroll past.
+      setTab("factory");
+      var sp = $("storepanel");
+      if (sp) sp.open = true;
+      if (sp && sp.scrollIntoView) sp.scrollIntoView({ block: "center" });
     }
     render();
   })();
