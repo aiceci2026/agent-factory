@@ -708,10 +708,10 @@ Instructions in plain Markdown.</pre>
     var list = visibleTasks();
     if (!list.length) {
       el.innerHTML = emptyBox(
-        S.connected ? "No " + S.realm + " items in this view" : "Waiting for the store",
+        S.connected ? "No " + S.realm + " items in this view" : "Not connected yet",
         S.connected
-          ? "Capture one above the way you'd write it in OneNote. Exclamation marks set urgency; a question mark marks it as a decision rather than an action."
-          : "If this doesn't fill in, the page couldn't reach the store. Your definitions and scripts are files on disk and are unaffected.");
+          ? "Capture one above, written the way you would write it in your notes. Exclamation marks set urgency; a question mark marks it as a decision rather than an action."
+          : "This page holds no data of its own. Open the Factory tab, enter your repository and token under Storage, and your items will load.");
       return;
     }
     if (S.groupBy === "none") { el.innerHTML = list.map(taskRow).join(""); return; }
