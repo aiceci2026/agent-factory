@@ -1,0 +1,976 @@
+<title>Agent Factory</title>
+<!-- PUBLIC SHELL. This file is served from a public GitHub Pages site, so it must
+     contain no names: no colleagues, no customers, no deal data. The vocabulary and
+     every task live in the private repo and load only after the viewer supplies a
+     token. Keep it that way. -->
+
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Declared here rather than relying on the host skeleton, so this file also renders
+     correctly if the factory is ever re-hosted outside claude.ai. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* Layout: single column, sticky instrument header. Control-room neutrals (cool slate,
+   biased toward the teal accent), signal amber for her own exclamation marks, indigo
+   for decisions so "think" never reads like "do". */
+:root {
+  --bg:        #f4f6f7;
+  --surface:   #ffffff;
+  --surface-2: #eceff1;
+  --line:      #d4dade;
+  --fg:        #16242b;
+  --fg-dim:    #5a6b73;
+  --fg-faint:  #869aa3;
+  --accent:    #0e6f78;
+  --accent-ink:#ffffff;
+  --urgent:    #b4440e;
+  --urgent-bg: #fdf0e8;
+  --decide:    #4a4a9c;
+  --decide-bg: #efeffa;
+  --ok:        #1d7a4d;
+  --warn:      #9a6b00;
+  --bad:       #a62f2f;
+
+  --f-display: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --f-body:    'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --f-mono:    'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #0e1618;
+    --surface:   #162125;
+    --surface-2: #1d2c31;
+    --line:      #2b3d43;
+    --fg:        #e4edf0;
+    --fg-dim:    #9db0b8;
+    --fg-faint:  #6e848d;
+    --accent:    #43b9c2;
+    --accent-ink:#06211f;
+    --urgent:    #f08a4b;
+    --urgent-bg: #2e1d12;
+    --decide:    #9b9bea;
+    --decide-bg: #1d1d33;
+    --ok:        #4cc489;
+    --warn:      #d8a73c;
+    --bad:       #e4716f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:        #0e1618;
+  --surface:   #162125;
+  --surface-2: #1d2c31;
+  --line:      #2b3d43;
+  --fg:        #e4edf0;
+  --fg-dim:    #9db0b8;
+  --fg-faint:  #6e848d;
+  --accent:    #43b9c2;
+  --accent-ink:#06211f;
+  --urgent:    #f08a4b;
+  --urgent-bg: #2e1d12;
+  --decide:    #9b9bea;
+  --decide-bg: #1d1d33;
+  --ok:        #4cc489;
+  --warn:      #d8a73c;
+  --bad:       #e4716f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+/* Also set by the host skeleton; repeated so the file stands alone when re-hosted. */
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+  max-width: 980px; margin: 0 auto;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
+}
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- header ---------- */
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  padding-block: 14px 0;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.brand h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.brand .sub { color: var(--fg-faint); font-size: 12.5px; }
+.tabs { display: flex; gap: 2px; margin-top: 12px; }
+.tabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 7px 2px; margin-right: 18px; color: var(--fg-dim);
+  font-family: var(--f-display); font-weight: 600; font-size: 14px;
+}
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs .badge {
+  display: inline-block; margin-left: 6px; min-width: 18px; padding: 0 5px;
+  background: var(--accent); color: var(--accent-ink); border-radius: 9px;
+  font-size: 11px; font-family: var(--f-mono); text-align: center;
+}
+
+/* ---------- controls ---------- */
+.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button {
+  background: var(--surface); border: 0; padding: 6px 13px; font-size: 13px;
+  font-family: var(--f-display); font-weight: 600; color: var(--fg-dim);
+}
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 99px;
+  padding: 4px 11px; font-size: 12.5px; color: var(--fg-dim);
+}
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.spacer { flex: 1 1 auto; min-width: 0; }
+
+/* ---------- capture ---------- */
+.capture { display: flex; gap: 8px; margin-top: 14px; }
+.capture input {
+  flex: 1 1 auto; min-width: 0; font: inherit; font-family: var(--f-mono); font-size: 14px;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--surface); color: var(--fg);
+}
+.capture input::placeholder { color: var(--fg-faint); font-family: var(--f-body); }
+.capture button {
+  background: var(--accent); color: var(--accent-ink); border: 0;
+  border-radius: var(--r); padding: 0 16px; font-family: var(--f-display); font-weight: 600;
+}
+.capture button:disabled { opacity: .5; cursor: default; }
+.readback {
+  margin-top: 8px; padding: 9px 12px; border-left: 3px solid var(--accent);
+  background: var(--surface-2); border-radius: 0 var(--r) var(--r) 0; font-size: 13px;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- task rows ---------- */
+.group-label {
+  font-family: var(--f-display); font-size: 11.5px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--fg-faint);
+  margin: 22px 0 8px;
+}
+.row {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--line); border-radius: var(--r);
+  padding: 11px 13px; margin-bottom: 7px;
+}
+.row.u1 { border-left-color: var(--warn); }
+.row.u2 { border-left-color: var(--urgent); }
+.row.u3 { border-left-color: var(--urgent); box-shadow: inset 3px 0 0 var(--urgent); }
+.row.decide { border-left-style: dashed; border-left-color: var(--decide); }
+.row .body { flex: 1 1 auto; min-width: 0; }
+.raw {
+  font-family: var(--f-mono); font-size: 14px; font-weight: 500;
+  word-break: break-word; display: block;
+}
+.row.done .raw { text-decoration: line-through; color: var(--fg-faint); }
+.title { color: var(--fg-dim); font-size: 13px; margin-top: 1px; }
+.meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 7px; }
+.tag {
+  font-size: 11px; font-family: var(--f-mono); padding: 2px 7px; border-radius: 4px;
+  background: var(--surface-2); color: var(--fg-dim); white-space: nowrap;
+}
+.tag.urgent { background: var(--urgent-bg); color: var(--urgent); }
+.tag.decide { background: var(--decide-bg); color: var(--decide); }
+.tag.src { background: transparent; border: 1px dashed var(--line); }
+.act { display: flex; gap: 6px; flex-shrink: 0; }
+.act button {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px;
+  padding: 4px 9px; font-size: 12px; color: var(--fg-dim);
+}
+.act button.go { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- proposals ---------- */
+.prop { border-left: 4px solid var(--accent); }
+.rationale { font-size: 13.5px; margin-top: 2px; }
+.evidence { margin-top: 7px; font-size: 12px; color: var(--fg-faint); }
+.evidence li { margin-top: 2px; }
+.evidence ul { margin: 2px 0 0; padding-left: 16px; }
+
+/* ---------- factory ---------- */
+.agrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 14px; }
+.acard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 14px; }
+.acard h3 { font-family: var(--f-mono); font-size: 14px; font-weight: 500; }
+.acard .purpose { font-size: 13px; color: var(--fg-dim); margin-top: 5px; }
+.pill {
+  display: inline-block; font-size: 10.5px; font-family: var(--f-display); font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px;
+}
+.pill.active   { background: var(--accent); color: var(--accent-ink); }
+.pill.scaffold { background: var(--surface-2); color: var(--fg-dim); border: 1px dashed var(--line); }
+.pill.retired  { background: var(--surface-2); color: var(--fg-faint); }
+.acard .line { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--fg-faint); }
+.accept { margin-top: 10px; }
+.accept .track { height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.accept .fill { height: 100%; background: var(--accent); }
+.accept .fill.low { background: var(--bad); }
+.accept .cap { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--fg-faint); margin-top: 4px; }
+
+.timeline { margin-top: 10px; }
+.run { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+.run .when { font-family: var(--f-mono); font-size: 11.5px; color: var(--fg-faint); flex: 0 0 96px; }
+.run .who  { font-family: var(--f-mono); font-size: 12.5px; flex: 0 0 auto; }
+.run .what { color: var(--fg-dim); flex: 1 1 auto; min-width: 0; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; align-self: center; }
+.dot.ok { background: var(--ok); } .dot.error { background: var(--bad); }
+.dot.running { background: var(--warn); } .dot.skipped { background: var(--fg-faint); }
+
+.cfg { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; margin-top: 11px; }
+.cfg label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--fg-dim); min-width: 0; }
+.cfg input {
+  font: inherit; font-family: var(--f-mono); font-size: 13px; padding: 7px 9px; min-width: 0;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg);
+}
+.cfgact { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+.cfgact button { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 13px; font-size: 13px; }
+.cfgact button.go { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.warn { font-size: 12.5px; color: var(--warn); margin-top: 9px; }
+details.addagent { margin-top: 20px; border: 1px dashed var(--line); border-radius: var(--r); padding: 12px 14px; background: var(--surface); }
+details.addagent summary { font-family: var(--f-display); font-weight: 600; font-size: 14px; cursor: pointer; }
+pre { overflow-x: auto; background: var(--surface-2); padding: 11px 13px; border-radius: var(--r); font-family: var(--f-mono); font-size: 12px; line-height: 1.55; margin: 10px 0 0; }
+
+/* ---------- empty / status ---------- */
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 26px 20px; text-align: center; margin-top: 18px; background: var(--surface); }
+.empty h3 { font-size: 15px; }
+.empty p { color: var(--fg-dim); font-size: 13.5px; margin: 7px auto 0; max-width: 46ch; }
+.statusline { margin-top: 10px; font-size: 12px; color: var(--fg-faint); font-family: var(--f-mono); }
+.statusline b { color: var(--warn); font-weight: 500; }
+@media (prefers-reduced-motion: no-preference) { .row, .acard { transition: border-color .15s ease; } }
+</style>
+
+<header>
+  <div class="brand">
+    <h1>Agent Factory</h1>
+    <span class="sub" id="brand-sub"></span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button id="tab-board"   role="tab" aria-selected="true"  aria-controls="panel-board">Board<span class="badge" id="badge-inbox" hidden>0</span></button>
+    <button id="tab-factory" role="tab" aria-selected="false" aria-controls="panel-factory">Factory</button>
+  </nav>
+</header>
+
+<main>
+  <section id="panel-board" role="tabpanel" aria-labelledby="tab-board">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Realm">
+        <button id="realm-work"     aria-pressed="true">Work</button>
+        <button id="realm-personal" aria-pressed="false">Personal</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="chips" id="views"></div>
+    </div>
+
+    <div class="capture">
+      <input id="cap" autocomplete="off" aria-label="Quick capture"
+             placeholder="Type it the way you'd write it in your notes — shorthand is fine">
+      <button id="cap-add" disabled>Add</button>
+    </div>
+    <div class="readback" id="readback" hidden></div>
+
+    <div class="bar" id="groupbar" style="margin-top:16px">
+      <span class="sub" style="font-size:12px;color:var(--fg-faint)">Group by</span>
+      <div class="chips" id="groups"></div>
+    </div>
+
+    <div id="board"></div>
+  </section>
+
+  <section id="panel-factory" role="tabpanel" aria-labelledby="tab-factory" hidden>
+    <div id="agents"></div>
+    <h2 style="font-size:15px;margin-top:26px">Run history</h2>
+    <div class="timeline" id="runs"></div>
+    <details class="addagent" id="storepanel">
+      <summary>Storage</summary>
+      <p style="font-size:13.5px;color:var(--fg-dim);margin:8px 0 0" id="store-explain"></p>
+      <div class="cfg">
+        <label>Owner <input id="gh-owner" autocomplete="off" placeholder="your-github-username"></label>
+        <label>Repo <input id="gh-repo" autocomplete="off" placeholder="your-private-repo"></label>
+        <label>Branch <input id="gh-branch" autocomplete="off" placeholder="main"></label>
+        <label>Token <input id="gh-token" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+      </div>
+      <div class="cfgact">
+        <button class="go" id="gh-connect">Connect</button>
+        <button id="gh-refresh">Refresh from GitHub</button>
+        <button id="gh-forget">Forget token</button>
+      </div>
+      <p class="warn" id="gh-msg">
+        The token is kept in this browser only and is never written into the repo. Use a
+        fine-grained token limited to this one repository, with Contents read and write.
+      </p>
+    </details>
+
+    <details class="addagent">
+      <summary>Add an agent</summary>
+      <p style="font-size:13.5px;color:var(--fg-dim);margin:8px 0 0">
+        One Markdown file in <code>agents/&lt;name&gt;/agent.md</code>. The frontmatter below is the whole
+        contract — no vendor names, no model ids, so the definition survives a move to another runtime.
+        Validate with <code>python adapters/validate.py</code>.
+      </p>
+<pre>---
+name: my-new-agent
+version: 1
+purpose: One sentence on what it does for you.
+status: scaffold
+trigger:
+  type: schedule        # manual | schedule | event
+  cron: "0 9 * * 1-5"
+  tz: Asia/Hong_Kong
+inputs:  [mail.search, store.query]
+outputs: [store.propose, run.log]
+approval: required      # proposals only; never acts alone
+model_hint:
+  tier: default         # quick | default | complex
+limits:
+  lookback_days: 7
+  max_proposals: 20
+---
+
+Instructions in plain Markdown.</pre>
+    </details>
+  </section>
+
+  <p class="statusline" id="status">Connecting to the store…</p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- vocabulary ----------
+  // Deliberately empty in this file. The real lists - colleagues, customers, the first
+  // names that are ambiguous - live in the PRIVATE repo as store/data/vocabulary.json
+  // and load only once a token is supplied. This page is public. Never put them back.
+  var VOCAB = { people: [], ambiguous: [], accounts: [], subtitle: "" };
+
+  function applyVocab() {
+    var v = (S.vocabulary && S.vocabulary[0]) || null;
+    if (v) {
+      VOCAB.people    = v.people    || [];
+      VOCAB.ambiguous = v.ambiguous || [];
+      VOCAB.accounts  = v.accounts  || [];
+      VOCAB.subtitle  = v.subtitle  || "";
+    }
+    var sub = $("brand-sub");
+    if (sub) sub.textContent = VOCAB.subtitle;
+  }
+
+  var BUCKETS = [
+    ["admin",      /claim|expense|millage|mileage|workday|comp plan|visa|報銷|請款/i],
+    ["travel",     /hotel|flight|book (kl|us|tw)|trip|機票|酒店|訂/i],
+    ["event",      /event|seminar|webinar|user session|rsvp|blast|invite/i],
+    ["forecast",   /forecast|quota|attainment|pipeline|qbr|target/i],
+    ["enablement", /ppt|deck|slide|training|enablement|demo/i],
+    ["channel",    /deal reg|incentive|program|funding|disti|reseller|partner program/i],
+    ["alliance",   /microsoft|\bms\b|alliance|account mapping|marketplace|azure/i],
+    ["study",      /study|learn|understand|read|研究|睇下/i],
+    ["internal",   /1:1|huddle|cadence|internal|team meeting/i],
+    ["home",       /wedding|house|moving|airbnb|貓|婚/i],
+    ["customer",   /call|meet|poc|proposal|quote|客/i]
+  ];
+  var PERSONAL = /wedding|house|moving|airbnb|visa|貓|婚|family|法例|check law/i;
+
+  // ---------- deterministic fragment parser ----------
+  // Pure function, no model needed. This is what keeps capture working if the
+  // factory ever moves off a runtime that can call a model from the page.
+  function parseFragment(raw) {
+    var t = String(raw || "").trim();
+    var bangs = (t.match(/!/g) || []).length;
+    var hasCJK = /[㐀-鿿]/.test(t);
+    var hasLatin = /[A-Za-z]/.test(t);
+    var canto = /[嘅佢咗睇搵冇喺啲乜嘢]/.test(t);
+
+    var region = null;
+    if (/\bTW\b|taiwan|台灣|台湾/i.test(t)) region = "TW";
+    else if (/\bMO\b|macau|澳門/i.test(t)) region = "MO";
+    else if (/\bHK\b|hong ?kong|香港/i.test(t)) region = "HK";
+
+    var bucket = null;
+    for (var i = 0; i < BUCKETS.length; i++) {
+      if (BUCKETS[i][1].test(t)) { bucket = BUCKETS[i][0]; break; }
+    }
+
+    var person = [], ambiguous = false;
+    VOCAB.people.forEach(function (p) {
+      if (new RegExp("(^|[^A-Za-z])" + p + "([^A-Za-z]|$)", "i").test(t)) {
+        person.push(p);
+        if (VOCAB.ambiguous.indexOf(p) >= 0) ambiguous = true;
+      }
+    });
+    var account = VOCAB.accounts.filter(function (a) { return t.toLowerCase().indexOf(a.toLowerCase()) >= 0; });
+
+    var lang = "en";
+    if (hasCJK && hasLatin) lang = "mixed";
+    else if (hasCJK) lang = canto ? "zh-HK" : "zh-TW";
+
+    var now = new Date();
+    return {
+      raw: t,
+      title: t.replace(/[!?]+$/g, "").trim() || t,
+      realm: PERSONAL.test(t) ? "personal" : "work",
+      status: "open",
+      urgency: Math.min(3, bangs),
+      undecided: /\?/.test(t),
+      person: person, personAmbiguous: ambiguous, account: account,
+      region: region, bucket: bucket, due: null,
+      month: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0"),
+      waitingOn: null, lang: lang,
+      source: { kind: "dashboard", ref: "quick-capture" },
+      createdAt: now.toISOString(), updatedAt: now.toISOString()
+    };
+  }
+
+  // ---------- state ----------
+  var S = {
+    tab: "board", realm: "work", view: "today", groupBy: "none",
+    tasks: [], proposals: [], people: [], runs: [], agents: [], vocabulary: [],
+    store: null, user: null, sample: null, connected: false, note: ""
+  };
+  var COLLECTIONS = ["tasks", "proposals", "people", "runs", "agents", "vocabulary"];
+  var VIEWS = [["today","Today"],["month","This month"],["waiting","Waiting on"],["inbox","Inbox"],["done","Done"]];
+  var GROUPS = [["none","—"],["person","Person"],["account","Account"],["region","Region"],["bucket","Bucket"]];
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function uid(p) { return p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function unwrap(d) {
+    if (!d) return null;
+    if (typeof d.data === "function") { var o = d.data() || {}; o.id = o.id || d.id; return o; }
+    if (d.data && typeof d.data === "object") { var x = Object.assign({}, d.data); x.id = x.id || d.id; return x; }
+    return d;
+  }
+  function docsOf(snap) {
+    if (!snap) return [];
+    var arr = Array.isArray(snap) ? snap : (Array.isArray(snap.docs) ? snap.docs : []);
+    return arr.map(unwrap).filter(Boolean);
+  }
+
+  // ---------- store backends ----------
+  // Two implementations behind one interface. Everything above and below this block is
+  // backend-agnostic, which is what makes the dashboard survive leaving claude.ai.
+
+  function b64encodeUtf8(str) {
+    var bytes = new TextEncoder().encode(str), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function b64decodeUtf8(b64) {
+    var bin = atob(String(b64).replace(/\s/g, ""));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+
+  function loadCfg() {
+    try { return JSON.parse(localStorage.getItem("factory.github") || "null"); }
+    catch (e) { return null; }
+  }
+  function saveCfg(c) { try { localStorage.setItem("factory.github", JSON.stringify(c)); } catch (e) {} }
+  function clearCfg() { try { localStorage.removeItem("factory.github"); } catch (e) {} }
+
+  function makeArtifactStore(db) {
+    return {
+      kind: "artifact", label: "Claude artifact store", live: true,
+      start: function () {
+        COLLECTIONS.forEach(function (coll) {
+          try {
+            db.collection(coll).onSnapshot(function (snap) { S[coll] = docsOf(snap); render(); });
+          } catch (e) { S.note = "could not subscribe to " + coll; }
+        });
+        return Promise.resolve();
+      },
+      refresh: function () { return Promise.resolve(); },
+      persist: function (coll, id, doc, patch) {
+        return patch ? db.doc(coll + "/" + id).update(patch) : db.doc(coll + "/" + id).set(doc);
+      }
+    };
+  }
+
+  function makeGitHubStore(cfg) {
+    var sha = {}, dirty = {}, timer = null, saving = false;
+    var base = "https://api.github.com/repos/" + encodeURIComponent(cfg.owner) + "/" +
+               encodeURIComponent(cfg.repo) + "/contents/store/data/";
+
+    function h(extra) {
+      var o = {
+        "Authorization": "Bearer " + cfg.token,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      };
+      if (extra) for (var k in extra) o[k] = extra[k];
+      return o;
+    }
+
+    async function pull(coll) {
+      var url = base + coll + ".json?ref=" + encodeURIComponent(cfg.branch) + "&_=" + Date.now();
+      var r = await fetch(url, { headers: h(), cache: "no-store" });
+      if (r.status === 404) { sha[coll] = null; return []; }   // collection not created yet
+      if (r.status === 401) throw new Error("GitHub rejected the token");
+      if (!r.ok) throw new Error("GitHub " + r.status + " reading " + coll);
+      var j = await r.json();
+      sha[coll] = j.sha;
+      var text = b64decodeUtf8(j.content || "");
+      return text.trim() ? JSON.parse(text) : [];
+    }
+
+    function put(coll, docs) {
+      var body = {
+        message: "factory: " + coll + " (" + docs.length + ")",
+        content: b64encodeUtf8(JSON.stringify(docs, null, 2) + "\n"),
+        branch: cfg.branch
+      };
+      if (sha[coll]) body.sha = sha[coll];
+      return fetch(base + coll + ".json", {
+        method: "PUT", headers: h({ "Content-Type": "application/json" }), body: JSON.stringify(body)
+      });
+    }
+
+    async function push(coll) {
+      var r = await put(coll, S[coll] || []);
+      if (r.status === 409 || r.status === 422) {
+        // Another device wrote first. Merge instead of clobbering: keep remote documents
+        // we do not hold locally, and let ours win on the same id.
+        var remote = await pull(coll);
+        var byId = {};
+        remote.forEach(function (d) { if (d && d.id) byId[d.id] = d; });
+        (S[coll] || []).forEach(function (d) { if (d && d.id) byId[d.id] = d; });
+        S[coll] = Object.keys(byId).map(function (k) { return byId[k]; });
+        r = await put(coll, S[coll]);
+      }
+      if (!r.ok) throw new Error("GitHub " + r.status + " saving " + coll);
+      var j = await r.json();
+      sha[coll] = j.content && j.content.sha;
+    }
+
+    async function flush() {
+      if (saving) return;
+      saving = true;
+      var cols = Object.keys(dirty);
+      dirty = {};
+      try {
+        for (var i = 0; i < cols.length; i++) await push(cols[i]);
+        S.note = "";
+      } catch (e) {
+        S.note = String((e && e.message) || e);
+        cols.forEach(function (c) { dirty[c] = true; });   // keep them pending for a retry
+      }
+      saving = false;
+      render();
+    }
+
+    async function pullAll() {
+      for (var i = 0; i < COLLECTIONS.length; i++) S[COLLECTIONS[i]] = await pull(COLLECTIONS[i]);
+      render();
+    }
+
+    return {
+      kind: "github",
+      label: "GitHub " + cfg.owner + "/" + cfg.repo + " @" + cfg.branch,
+      live: false,
+      start: pullAll,
+      refresh: pullAll,
+      persist: function (coll) {
+        // One commit per burst of edits, not one per click.
+        dirty[coll] = true;
+        clearTimeout(timer);
+        timer = setTimeout(flush, 1500);
+        return Promise.resolve();
+      }
+    };
+  }
+
+  async function persist(coll, id, doc, patch) {
+    if (!S.store) { S.note = "no store configured — nothing saved"; renderStatus(); return; }
+    try { await S.store.persist(coll, id, doc, patch); }
+    catch (e) { S.note = String((e && e.message) || e); renderStatus(); }
+  }
+
+  // ---------- rendering ----------
+  function renderChips() {
+    $("views").innerHTML = VIEWS.map(function (v) {
+      var n = v[0] === "inbox" ? pending().length : "";
+      return '<button class="chip" data-view="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' +
+        esc(v[1]) + (n ? ' <span class="num">' + n + "</span>" : "") + "</button>";
+    }).join("");
+    $("groups").innerHTML = GROUPS.map(function (g) {
+      return '<button class="chip" data-group="' + g[0] + '" aria-pressed="' + (S.groupBy === g[0]) + '">' + esc(g[1]) + "</button>";
+    }).join("");
+    var n = pending().length;
+    $("badge-inbox").hidden = n === 0;
+    $("badge-inbox").textContent = n;
+    $("groupbar").hidden = S.view === "inbox";
+  }
+
+  function pending() { return S.proposals.filter(function (p) { return p.state === "pending"; }); }
+
+  function visibleTasks() {
+    var now = new Date();
+    var mon = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    return S.tasks.filter(function (t) {
+      if ((t.realm || "work") !== S.realm) return false;
+      if (S.view === "done")    return t.status === "done" || t.status === "dropped";
+      if (S.view === "waiting") return t.status === "waiting";
+      if (S.view === "month")   return t.status !== "done" && t.status !== "dropped" && t.month === mon;
+      return t.status === "open" || t.status === "doing";
+    }).sort(function (a, b) {
+      return (b.urgency || 0) - (a.urgency || 0) ||
+             String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+    });
+  }
+
+  function tagsFor(t) {
+    var out = [];
+    if (t.urgency >= 2) out.push('<span class="tag urgent">urgent</span>');
+    if (t.undecided)    out.push('<span class="tag decide">decide</span>');
+    if (t.region)       out.push('<span class="tag">' + esc(t.region) + "</span>");
+    if (t.bucket)       out.push('<span class="tag">' + esc(t.bucket) + "</span>");
+    (t.person || []).forEach(function (p) {
+      out.push('<span class="tag">' + esc(p) + (t.personAmbiguous ? "?" : "") + "</span>");
+    });
+    (t.account || []).forEach(function (a) { out.push('<span class="tag">' + esc(a) + "</span>"); });
+    if (t.source && t.source.kind && t.source.kind !== "dashboard") {
+      out.push('<span class="tag src">' + esc(t.source.kind) + "</span>");
+    }
+    return out.join("");
+  }
+
+  function taskRow(t) {
+    var cls = "row u" + (t.urgency || 0) + (t.undecided ? " decide" : "") +
+              (t.status === "done" || t.status === "dropped" ? " done" : "");
+    var showTitle = t.title && t.title !== t.raw;
+    var acts = (t.status === "done" || t.status === "dropped")
+      ? '<button data-reopen="' + esc(t.id) + '">Reopen</button>'
+      : '<button class="go" data-done="' + esc(t.id) + '">Done</button>' +
+        '<button data-wait="' + esc(t.id) + '">Waiting</button>';
+    return '<div class="' + cls + '"><div class="body">' +
+      '<span class="raw">' + esc(t.raw) + "</span>" +
+      (showTitle ? '<div class="title">' + esc(t.title) + "</div>" : "") +
+      '<div class="meta">' + tagsFor(t) + "</div></div>" +
+      '<div class="act">' + acts + "</div></div>";
+  }
+
+  function propRow(p) {
+    var pay = p.payload || {};
+    var ev = (p.evidence || []).map(function (e) {
+      return "<li>" + esc(e.label || e.ref || "") + "</li>";
+    }).join("");
+    return '<div class="row prop"><div class="body">' +
+      '<span class="raw">' + esc(pay.raw || pay.title || p.kind) + "</span>" +
+      (p.rationale ? '<div class="rationale">' + esc(p.rationale) + "</div>" : "") +
+      '<div class="meta"><span class="tag">' + esc(p.agent) + '</span><span class="tag">' + esc(p.kind) + "</span>" +
+      (pay.region ? '<span class="tag">' + esc(pay.region) + "</span>" : "") +
+      (pay.bucket ? '<span class="tag">' + esc(pay.bucket) + "</span>" : "") + "</div>" +
+      (ev ? '<div class="evidence">Evidence<ul>' + ev + "</ul></div>" : "") +
+      "</div><div class='act'>" +
+      '<button class="go" data-accept="' + esc(p.id) + '">Accept</button>' +
+      '<button data-dismiss="' + esc(p.id) + '">Dismiss</button></div></div>';
+  }
+
+  function groupKeys(t) {
+    if (S.groupBy === "person")  return (t.person || []).length ? t.person : ["Unassigned"];
+    if (S.groupBy === "account") return (t.account || []).length ? t.account : ["No account"];
+    if (S.groupBy === "region")  return [t.region || "No region"];
+    if (S.groupBy === "bucket")  return [t.bucket || "Unsorted"];
+    return ["__all"];
+  }
+
+  function renderBoard() {
+    var el = $("board");
+    if (S.view === "inbox") {
+      var ps = pending();
+      el.innerHTML = ps.length
+        ? ps.map(propRow).join("")
+        : emptyBox("Nothing waiting on you",
+            "Agents put proposals here. Nothing becomes a task until you accept it — that rule is enforced in the store, not just by convention.");
+      return;
+    }
+    var list = visibleTasks();
+    if (!list.length) {
+      el.innerHTML = emptyBox(
+        S.connected ? "No " + S.realm + " items in this view" : "Waiting for the store",
+        S.connected
+          ? "Capture one above the way you'd write it in OneNote. Exclamation marks set urgency; a question mark marks it as a decision rather than an action."
+          : "If this doesn't fill in, the page couldn't reach the store. Your definitions and scripts are files on disk and are unaffected.");
+      return;
+    }
+    if (S.groupBy === "none") { el.innerHTML = list.map(taskRow).join(""); return; }
+    var buckets = {};
+    list.forEach(function (t) {
+      groupKeys(t).forEach(function (k) { (buckets[k] = buckets[k] || []).push(t); });
+    });
+    el.innerHTML = Object.keys(buckets).sort().map(function (k) {
+      return '<div class="group-label">' + esc(k) + ' <span class="num">' + buckets[k].length + "</span></div>" +
+        buckets[k].map(taskRow).join("");
+    }).join("");
+  }
+
+  function emptyBox(h, p) {
+    return '<div class="empty"><h3>' + esc(h) + "</h3><p>" + esc(p) + "</p></div>";
+  }
+
+  function renderFactory() {
+    var el = $("agents");
+    if (!S.agents.length) {
+      el.innerHTML = emptyBox("No agents registered yet",
+        "Eight definitions live in agents/. Once they're registered here you'll see each one's trigger, last run and acceptance rate.");
+    } else {
+      el.innerHTML = '<div class="agrid">' + S.agents.slice().sort(function (a, b) {
+        return String(a.name).localeCompare(String(b.name));
+      }).map(agentCard).join("") + "</div>";
+    }
+    var rs = S.runs.slice().sort(function (a, b) {
+      return String(b.startedAt || "").localeCompare(String(a.startedAt || ""));
+    }).slice(0, 25);
+    $("runs").innerHTML = rs.length ? rs.map(runRow).join("")
+      : '<p style="color:var(--fg-faint);font-size:13px">No runs yet. Every run is logged here — an agent that runs silently is invisible, and invisible agents get retired.</p>';
+  }
+
+  function agentCard(a) {
+    var st = a.stats || {};
+    var prop = st.proposals || 0, acc = st.accepted || 0;
+    var rate = prop ? Math.round((acc / prop) * 100) : null;
+    var trig = a.trigger && a.trigger.type ? a.trigger.type : "manual";
+    var when = a.trigger && a.trigger.cron ? trig + " · " + a.trigger.cron : trig;
+    return '<div class="acard">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:start">' +
+      "<h3>" + esc(a.name) + '</h3><span class="pill ' + esc(a.status || "scaffold") + '">' + esc(a.status || "scaffold") + "</span></div>" +
+      '<div class="purpose">' + esc(a.purpose || "") + "</div>" +
+      '<div class="line"><span>' + esc(when) + "</span><span>" +
+      (a.lastRunAt ? "last run " + esc(String(a.lastRunAt).slice(0, 10)) : "never run") + "</span></div>" +
+      '<div class="accept"><div class="track"><div class="fill' + (rate !== null && rate < 30 ? " low" : "") +
+      '" style="width:' + (rate === null ? 0 : rate) + '%"></div></div>' +
+      '<div class="cap"><span>acceptance</span><span class="num">' +
+      (rate === null ? "no proposals yet" : rate + "% · " + acc + "/" + prop) + "</span></div></div></div>";
+  }
+
+  function runRow(r) {
+    var when = String(r.startedAt || "").replace("T", " ").slice(0, 16);
+    return '<div class="run"><span class="dot ' + esc(r.status || "ok") + '"></span>' +
+      '<span class="when num">' + esc(when) + "</span>" +
+      '<span class="who">' + esc(r.agent) + "</span>" +
+      '<span class="what">' + esc(r.summary || r.error || r.status || "") + "</span></div>";
+  }
+
+  function renderStatus() {
+    var bits = [];
+    if (!S.store) bits.push("no store configured");
+    else bits.push((S.connected ? "connected" : "not connected") + " · " + S.store.label);
+    if (S.store && S.store.kind === "github") bits.push("manual refresh");
+    bits.push(S.sample ? "in-page parsing on" : "local parser");
+    bits.push(S.tasks.length + " tasks · " + pending().length + " pending · " + S.agents.length + " agents");
+    $("status").innerHTML = (S.note ? "<b>" + esc(S.note) + "</b> · " : "") + esc(bits.join(" · "));
+    var ex = $("store-explain");
+    if (ex) {
+      ex.textContent = S.store && S.store.kind === "artifact"
+        ? "Running inside the Claude artifact viewer, so the artifact store is in use and these settings are not needed."
+        : "This page is running outside claude.ai, so it reads and writes store/data/*.json in your private GitHub repo. Each change is a commit, so you get full history.";
+    }
+  }
+
+  function render() { applyVocab(); renderChips(); renderBoard(); renderFactory(); renderStatus(); }
+
+  // ---------- interaction ----------
+  $("tab-board").onclick = function () { setTab("board"); };
+  $("tab-factory").onclick = function () { setTab("factory"); };
+  function setTab(t) {
+    S.tab = t;
+    $("tab-board").setAttribute("aria-selected", String(t === "board"));
+    $("tab-factory").setAttribute("aria-selected", String(t === "factory"));
+    $("panel-board").hidden = t !== "board";
+    $("panel-factory").hidden = t !== "factory";
+  }
+  $("realm-work").onclick = function () { S.realm = "work"; syncRealm(); };
+  $("realm-personal").onclick = function () { S.realm = "personal"; syncRealm(); };
+  function syncRealm() {
+    $("realm-work").setAttribute("aria-pressed", String(S.realm === "work"));
+    $("realm-personal").setAttribute("aria-pressed", String(S.realm === "personal"));
+    render();
+  }
+  $("views").onclick = function (e) {
+    var b = e.target.closest("[data-view]"); if (!b) return;
+    S.view = b.getAttribute("data-view"); render();
+  };
+  $("groups").onclick = function (e) {
+    var b = e.target.closest("[data-group]"); if (!b) return;
+    S.groupBy = b.getAttribute("data-group"); render();
+  };
+
+  var capEl = $("cap"), addEl = $("cap-add"), rbEl = $("readback");
+  capEl.oninput = function () {
+    var v = capEl.value.trim();
+    addEl.disabled = !v;
+    if (!v) { rbEl.hidden = true; return; }
+    var p = parseFragment(v);
+    var bits = [];
+    if (p.urgency) bits.push("urgency " + p.urgency);
+    if (p.undecided) bits.push("decision, not an action");
+    if (p.region) bits.push(p.region);
+    if (p.bucket) bits.push(p.bucket);
+    if (p.person.length) bits.push(p.person.join(", ") + (p.personAmbiguous ? " (ambiguous — kept as written)" : ""));
+    if (p.account.length) bits.push(p.account.join(", "));
+    if (p.realm === "personal") bits.push("personal");
+    rbEl.hidden = false;
+    rbEl.innerHTML = bits.length ? "Reads as: " + esc(bits.join(" · ")) : "No signals detected — saved exactly as typed.";
+  };
+  capEl.onkeydown = function (e) { if (e.key === "Enter" && capEl.value.trim()) addTask(); };
+  addEl.onclick = addTask;
+
+  async function addTask() {
+    var t = parseFragment(capEl.value);
+    t.id = uid("t");
+    capEl.value = ""; addEl.disabled = true; rbEl.hidden = true;
+    S.tasks.push(t); render();
+    await persist("tasks", t.id, t);
+  }
+
+  $("board").onclick = async function (e) {
+    var b = e.target.closest("button[data-done],button[data-wait],button[data-reopen],button[data-accept],button[data-dismiss]");
+    if (!b) return;
+    var moves = { "data-done": "done", "data-wait": "waiting", "data-reopen": "open" };
+    for (var attr in moves) {
+      var id = b.getAttribute(attr);
+      if (id) return setStatus(id, moves[attr]);
+    }
+    var acc = b.getAttribute("data-accept");
+    if (acc) return decide(acc, true);
+    var dis = b.getAttribute("data-dismiss");
+    if (dis) return decide(dis, false);
+  };
+
+  async function setStatus(id, status) {
+    var t = S.tasks.filter(function (x) { return x.id === id; })[0];
+    if (!t) return;
+    t.status = status; t.updatedAt = new Date().toISOString();
+    render();
+    await persist("tasks", id, t, { status: status, updatedAt: t.updatedAt });
+  }
+
+  async function decide(pid, accept) {
+    var p = S.proposals.filter(function (x) { return x.id === pid; })[0];
+    if (!p) return;
+    p.state = accept ? "accepted" : "dismissed";
+    p.decidedAt = new Date().toISOString();
+    var newTask = null;
+    if (accept && p.kind === "create_task") {
+      newTask = Object.assign({ status: "open", realm: "work" }, p.payload);
+      newTask.id = newTask.id || uid("t");
+      newTask.createdAt = newTask.createdAt || p.decidedAt;
+      newTask.source = newTask.source || { kind: "agent", ref: p.agent };
+      S.tasks.push(newTask);
+    }
+    var a = S.agents.filter(function (x) { return x.name === p.agent; })[0];
+    if (a) {
+      a.stats = a.stats || { runs: 0, proposals: 0, accepted: 0, dismissed: 0 };
+      if (accept) a.stats.accepted = (a.stats.accepted || 0) + 1;
+      else a.stats.dismissed = (a.stats.dismissed || 0) + 1;
+    }
+    render();
+    await persist("proposals", pid, p, { state: p.state, decidedAt: p.decidedAt });
+    if (newTask) await persist("tasks", newTask.id, newTask);
+    if (a) await persist("agents", a.name, a, { stats: a.stats });
+  }
+
+  // ---------- storage settings (GitHub backend only) ----------
+  function cfgFromInputs() {
+    return {
+      owner:  $("gh-owner").value.trim(),
+      repo:   $("gh-repo").value.trim(),
+      branch: $("gh-branch").value.trim() || "main",
+      token:  $("gh-token").value.trim()
+    };
+  }
+  function fillCfgInputs(c) {
+    if (!c) return;
+    $("gh-owner").value  = c.owner || "";
+    $("gh-repo").value   = c.repo || "";
+    $("gh-branch").value = c.branch || "main";
+    $("gh-token").value  = c.token || "";
+  }
+  function msg(text, bad) {
+    var el = $("gh-msg");
+    el.textContent = text;
+    el.style.color = bad ? "var(--bad)" : "var(--fg-faint)";
+  }
+
+  $("gh-connect").onclick = async function () {
+    var c = cfgFromInputs();
+    if (!c.owner || !c.repo || !c.token) { msg("Owner, repo and token are all required.", true); return; }
+    msg("Connecting…");
+    var store = makeGitHubStore(c);
+    try {
+      await store.start();
+      S.store = store; S.connected = true; S.note = "";
+      saveCfg(c);
+      msg("Connected. " + S.proposals.length + " proposals, " + S.tasks.length + " tasks loaded.");
+    } catch (e) {
+      S.connected = false;
+      msg(String((e && e.message) || e), true);
+    }
+    render();
+  };
+  $("gh-refresh").onclick = async function () {
+    if (!S.store) { msg("Connect first.", true); return; }
+    msg("Refreshing…");
+    try { await S.store.refresh(); msg("Up to date."); }
+    catch (e) { msg(String((e && e.message) || e), true); }
+  };
+  $("gh-forget").onclick = function () {
+    clearCfg();
+    $("gh-token").value = "";
+    S.store = null; S.connected = false;
+    msg("Token removed from this browser. Nothing in the repo changed.");
+    render();
+  };
+
+  // ---------- boot ----------
+  render();
+  (async function () {
+    var c = window.claude;
+    if (c && typeof c.use === "function") {
+      try { S.sample = await c.use("sample"); } catch (e) {}
+      try { S.user   = await c.use("user"); } catch (e) {}
+      var db = null;
+      try { db = await c.use("db"); } catch (e) {}
+      if (db) {
+        S.store = makeArtifactStore(db);
+        S.connected = true;
+        await S.store.start();
+        renderStatus();
+        return;
+      }
+    }
+    // Outside claude.ai: GitHub backend, configured once per device.
+    var cfg = loadCfg();
+    fillCfgInputs(cfg);
+    if (cfg && cfg.owner && cfg.repo && cfg.token) {
+      S.store = makeGitHubStore(cfg);
+      try { await S.store.start(); S.connected = true; }
+      catch (e) { S.note = String((e && e.message) || e); }
+    } else {
+      S.note = "not connected — open Factory → Storage";
+    }
+    render();
+  })();
+})();
+</script>
