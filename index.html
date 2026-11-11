@@ -391,7 +391,9 @@ Instructions in plain Markdown.</pre>
   // factory ever moves off a runtime that can call a model from the page.
   function parseFragment(raw) {
     var t = String(raw || "").trim();
-    var bangs = (t.match(/!/g) || []).length;
+    // Full-width ！ and ？ are what a Chinese IME produces and mean exactly what the
+    // ASCII forms mean. Must stay in step with tools/parse_fragment.py.
+    var bangs = (t.match(/[!！]/g) || []).length;
     var hasCJK = /[㐀-鿿]/.test(t);
     var hasLatin = /[A-Za-z]/.test(t);
     var canto = /[嘅佢咗睇搵冇喺啲乜嘢]/.test(t);
@@ -422,11 +424,11 @@ Instructions in plain Markdown.</pre>
     var now = new Date();
     return {
       raw: t,
-      title: t.replace(/[!?]+$/g, "").trim() || t,
+      title: t.replace(/[!?！？]+$/g, "").trim() || t,
       realm: PERSONAL.test(t) ? "personal" : "work",
       status: "open",
       urgency: Math.min(3, bangs),
-      undecided: /\?/.test(t),
+      undecided: /[?？]/.test(t),
       person: person, personAmbiguous: ambiguous, account: account,
       region: region, bucket: bucket, due: null,
       month: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0"),
